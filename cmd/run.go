@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"os"
 	"strings"
 	"sync"
@@ -18,8 +19,6 @@ import (
 	"github.com/argoproj-labs/argocd-image-updater/pkg/metrics"
 	"github.com/argoproj-labs/argocd-image-updater/pkg/registry"
 	"github.com/argoproj-labs/argocd-image-updater/pkg/version"
-
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/spf13/cobra"
 
@@ -111,10 +110,7 @@ func newRunCommand() *cobra.Command {
 			if !disableKubernetes {
 				ctx := context.Background()
 				ns := cfg.ArgocdNamespace
-				if !cfg.Namespaced {
-					ns = v1.NamespaceAll
-				}
-				cfg.KubeClient, err = getKubeConfig(ctx, ns, cfg.Namespaced, kubeConfig)
+				cfg.KubeClient, err = getKubeConfig(ctx, ns, kubeConfig)
 				if err != nil {
 					log.Fatalf("could not create K8s client: %v", err)
 				}
@@ -131,15 +127,15 @@ func newRunCommand() *cobra.Command {
 				cfg.ClientOpts.AuthToken = token
 			}
 
-			log.Infof("ArgoCD configuration: [apiKind=%s, server=%s, auth_token=%v, insecure=%v, grpc_web=%v, plaintext=%v, namespaced=%v, namespace=%s]",
+			log.Infof("ArgoCD configuration: [apiKind=%s, server=%s, auth_token=%v, insecure=%v, grpc_web=%v, plaintext=%v, namespace=%s, applicationNamespaces=%v]",
 				cfg.ApplicationsAPIKind,
 				cfg.ClientOpts.ServerAddr,
 				cfg.ClientOpts.AuthToken != "",
 				cfg.ClientOpts.Insecure,
 				cfg.ClientOpts.GRPCWeb,
 				cfg.ClientOpts.Plaintext,
-				cfg.Namespaced,
 				cfg.ArgocdNamespace,
+				cfg.ApplicationNamespaces,
 			)
 
 			// Health server will start in a go routine and run asynchronously
@@ -231,7 +227,7 @@ func newRunCommand() *cobra.Command {
 	runCmd.Flags().StringVar(&cfg.GitCommitMail, "git-commit-email", env.GetStringVal("GIT_COMMIT_EMAIL", "noreply@argoproj.io"), "E-Mail address to use for Git commits")
 	runCmd.Flags().StringVar(&commitMessagePath, "git-commit-message-path", defaultCommitTemplatePath, "Path to a template to use for Git commit messages")
 	runCmd.Flags().BoolVar(&cfg.DisableKubeEvents, "disable-kube-events", env.GetBoolVal("IMAGE_UPDATER_KUBE_EVENTS", false), "Disable kubernetes events")
-	runCmd.Flags().BoolVar(&cfg.Namespaced, "namespaced", env.GetBoolVal("IMAGE_UPDATER_NAMESPACED", true), "Scope to only the provided namespace")
+	runCmd.Flags().StringSliceVar(&cfg.ApplicationNamespaces, "application-namespaces", env.StringsFromEnv("IMAGE_UPDATER_APPLICATION_NAMESPACES", []string{}, ","), "List of additional namespaces to monitor applications in")
 
 	return runCmd
 }
@@ -253,19 +249,24 @@ func runImageUpdater(cfg *ImageUpdaterConfig, warmUp bool) (argocd.ImageUpdaterR
 		return result, err
 	}
 	cfg.ArgoClient = argoClient
-
-	apps, err := cfg.ArgoClient.ListApplications()
-	if err != nil {
-		log.WithContext().
-			AddField("argocd_server", cfg.ClientOpts.ServerAddr).
-			AddField("grpc_web", cfg.ClientOpts.GRPCWeb).
-			AddField("grpc_webroot", cfg.ClientOpts.GRPCWebRootPath).
-			AddField("plaintext", cfg.ClientOpts.Plaintext).
-			AddField("insecure", cfg.ClientOpts.Insecure).
-			Errorf("error while communicating with ArgoCD")
-		return result, err
+	namespaces := []string{""}
+	namespaces = append(namespaces, cfg.ApplicationNamespaces...)
+	apps := make([]v1alpha1.Application, 0)
+	for _, namespace := range namespaces {
+		nsApps, nsErr := cfg.ArgoClient.ListApplications(namespace)
+		if nsErr != nil {
+			log.WithContext().
+				AddField("argocd_server", cfg.ClientOpts.ServerAddr).
+				AddField("grpc_web", cfg.ClientOpts.GRPCWeb).
+				AddField("grpc_webroot", cfg.ClientOpts.GRPCWebRootPath).
+				AddField("plaintext", cfg.ClientOpts.Plaintext).
+				AddField("insecure", cfg.ClientOpts.Insecure).
+				AddField("namespace", namespace).
+				Errorf("error while communicating with ArgoCD")
+			return result, err
+		}
+		apps = append(apps, nsApps...)
 	}
-
 	// Get the list of applications that are allowed for updates, that is, those
 	// applications which have correct annotation.
 	appList, err := argocd.FilterApplicationsForUpdate(apps, cfg.AppNamePatterns, cfg.AppLabel)

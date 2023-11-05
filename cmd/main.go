@@ -27,25 +27,25 @@ const applicationsAPIKindArgoCD = "argocd"
 
 // ImageUpdaterConfig contains global configuration and required runtime data
 type ImageUpdaterConfig struct {
-	ApplicationsAPIKind string
-	ClientOpts          argocd.ClientOptions
-	ArgocdNamespace     string
-	DryRun              bool
-	CheckInterval       time.Duration
-	ArgoClient          argocd.ArgoCD
-	LogLevel            string
-	KubeClient          *kube.KubernetesClient
-	MaxConcurrency      int
-	HealthPort          int
-	MetricsPort         int
-	RegistriesConf      string
-	AppNamePatterns     []string
-	AppLabel            string
-	GitCommitUser       string
-	GitCommitMail       string
-	GitCommitMessage    *template.Template
-	DisableKubeEvents   bool
-	Namespaced          bool
+	ApplicationsAPIKind   string
+	ClientOpts            argocd.ClientOptions
+	ArgocdNamespace       string
+	DryRun                bool
+	CheckInterval         time.Duration
+	ArgoClient            argocd.ArgoCD
+	LogLevel              string
+	KubeClient            *kube.KubernetesClient
+	MaxConcurrency        int
+	HealthPort            int
+	MetricsPort           int
+	RegistriesConf        string
+	AppNamePatterns       []string
+	AppLabel              string
+	GitCommitUser         string
+	GitCommitMail         string
+	GitCommitMessage      *template.Template
+	DisableKubeEvents     bool
+	ApplicationNamespaces []string
 }
 
 // newRootCommand implements the root command of argocd-image-updater

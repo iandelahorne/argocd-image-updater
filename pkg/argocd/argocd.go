@@ -29,8 +29,11 @@ func (client *k8sClient) GetApplication(ctx context.Context, appName string) (*v
 	return client.kubeClient.ApplicationsClientset.ArgoprojV1alpha1().Applications(client.kubeClient.Namespace).Get(ctx, appName, v1.GetOptions{})
 }
 
-func (client *k8sClient) ListApplications() ([]v1alpha1.Application, error) {
-	list, err := client.kubeClient.ApplicationsClientset.ArgoprojV1alpha1().Applications(client.kubeClient.Namespace).List(context.TODO(), v1.ListOptions{})
+func (client *k8sClient) ListApplications(namespace string) ([]v1alpha1.Application, error) {
+	if namespace == "" {
+		namespace = client.kubeClient.Namespace
+	}
+	list, err := client.kubeClient.ApplicationsClientset.ArgoprojV1alpha1().Applications(namespace).List(context.TODO(), v1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +74,7 @@ type argoCD struct {
 // ArgoCD is the interface for accessing Argo CD functions we need
 type ArgoCD interface {
 	GetApplication(ctx context.Context, appName string) (*v1alpha1.Application, error)
-	ListApplications() ([]v1alpha1.Application, error)
+	ListApplications(namespace string) ([]v1alpha1.Application, error)
 	UpdateSpec(ctx context.Context, spec *application.ApplicationUpdateSpecRequest) (*v1alpha1.ApplicationSpec, error)
 }
 
@@ -264,7 +267,7 @@ func (client *argoCD) GetApplication(ctx context.Context, appName string) (*v1al
 
 // ListApplications returns a list of all application names that the API user
 // has access to.
-func (client *argoCD) ListApplications() ([]v1alpha1.Application, error) {
+func (client *argoCD) ListApplications(namespace string) ([]v1alpha1.Application, error) {
 	conn, appClient, err := client.Client.NewApplicationClient()
 	metrics.Clients().IncreaseArgoCDClientRequest(client.Client.ClientOptions().ServerAddr, 1)
 	if err != nil {
@@ -274,7 +277,9 @@ func (client *argoCD) ListApplications() ([]v1alpha1.Application, error) {
 	defer conn.Close()
 
 	metrics.Clients().IncreaseArgoCDClientRequest(client.Client.ClientOptions().ServerAddr, 1)
-	apps, err := appClient.List(context.TODO(), &application.ApplicationQuery{})
+	apps, err := appClient.List(context.TODO(), &application.ApplicationQuery{
+		AppNamespace: &namespace,
+	})
 	if err != nil {
 		metrics.Clients().IncreaseArgoCDClientError(client.Client.ClientOptions().ServerAddr, 1)
 		return nil, err
