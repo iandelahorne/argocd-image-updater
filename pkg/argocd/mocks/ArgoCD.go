@@ -40,13 +40,13 @@ func (_m *ArgoCD) GetApplication(ctx context.Context, appName string) (*v1alpha1
 	return r0, r1
 }
 
-// ListApplications provides a mock function with given fields:
-func (_m *ArgoCD) ListApplications() ([]v1alpha1.Application, error) {
-	ret := _m.Called()
+// ListApplications provides a mock function with given fields: namespace
+func (_m *ArgoCD) ListApplications(namespace string) ([]v1alpha1.Application, error) {
+	ret := _m.Called(namespace)
 
 	var r0 []v1alpha1.Application
-	if rf, ok := ret.Get(0).(func() []v1alpha1.Application); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(string) []v1alpha1.Application); ok {
+		r0 = rf(namespace)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]v1alpha1.Application)
@@ -54,8 +54,8 @@ func (_m *ArgoCD) ListApplications() ([]v1alpha1.Application, error) {
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(namespace)
 	} else {
 		r1 = ret.Error(1)
 	}

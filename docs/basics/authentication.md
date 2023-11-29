@@ -22,6 +22,16 @@ installation is in a different namespace than `argocd`, you would have
 to adapt the RoleBinding to bind to the ServiceAccount in the correct
 namespace.
 
+### <a name="auth-kubernetes-namespaces></> Applications in any namespace
+If you are leveraging the [Applications in any namespace](https://argo-cd.readthedocs.io/en/stable/operator-manual/app-any-namespace/) 
+functionality and providing `--application-namespaces` CLI argument or 
+setting `IMAGE_UPDATER_APPLICATION_NAMESPACES` environment variable, RBAC 
+must be adjusted to provide the `argocd-image-updater` ServiceAccount with 
+the necessary permissions (`get`, `list`, `update` and `patch` for 
+`applications.argoproj.io` resources) in the namespaces you want to watch. 
+This can be provided either with a cluster-wide ClusterRole, or via a Role 
+the targeted namespaces bound to the service account.  
+
 ## <a name="auth-argocd"></a>Authentication to Argo CD
 
 If you are using Argo CD Image Updater to connect to Argo CD via its API,

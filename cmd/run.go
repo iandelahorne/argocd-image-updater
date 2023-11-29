@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
+	"github.com/davecgh/go-spew/spew"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/strings/slices"
 	"os"
 	"strings"
 	"sync"
@@ -249,8 +252,23 @@ func runImageUpdater(cfg *ImageUpdaterConfig, warmUp bool) (argocd.ImageUpdaterR
 		return result, err
 	}
 	cfg.ArgoClient = argoClient
-	namespaces := []string{""}
-	namespaces = append(namespaces, cfg.ApplicationNamespaces...)
+
+	namespaces := make([]string, 0)
+	// There's no real globbing support in neither kube client nor argocd APIs for listing apps in namespaces.
+	// Instead, just handle the case of "*" and use NamespaceAll. Since this is empty string we can pass it easily both
+	// to kube client and argocd.
+	if slices.Contains(cfg.ApplicationNamespaces, "*") {
+		namespaces = append(namespaces, v1.NamespaceAll)
+	} else {
+		if cfg.ArgocdNamespace == "" {
+			//if namespace == "" {
+			//	namespace = client.kubeClient.Namespace
+			//}
+
+		}
+		namespaces = append(namespaces, cfg.ApplicationNamespaces...)
+	}
+	spew.Dump(namespaces)
 	apps := make([]v1alpha1.Application, 0)
 	for _, namespace := range namespaces {
 		nsApps, nsErr := cfg.ArgoClient.ListApplications(namespace)

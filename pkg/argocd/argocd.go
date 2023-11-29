@@ -30,9 +30,6 @@ func (client *k8sClient) GetApplication(ctx context.Context, appName string) (*v
 }
 
 func (client *k8sClient) ListApplications(namespace string) ([]v1alpha1.Application, error) {
-	if namespace == "" {
-		namespace = client.kubeClient.Namespace
-	}
 	list, err := client.kubeClient.ApplicationsClientset.ArgoprojV1alpha1().Applications(namespace).List(context.TODO(), v1.ListOptions{})
 	if err != nil {
 		return nil, err

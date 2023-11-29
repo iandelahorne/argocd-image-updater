@@ -225,6 +225,17 @@ If opting for such an approach, you should make sure that:
 * RBAC permissions are set-up so that instances cannot interfere with each
   others managed resources
 
+## Applications in any namespace
+If you wish to leverage [Applications in any namespace](https://argo-cd.readthedocs.io/en/stable/operator-manual/app-any-namespace/), you can 
+specify additional namespaces to outside of the configured namespace by 
+specifying a comma-separated list of namespaces to monitor as the CLI 
+argument `--application-namespaces` or the environment variable 
+`IMAGE_UPDATER_APPLICATION_NAMESPACES`.
+
+`argocd-image-updater` will need to have permissions provided to it to 
+manage applications in these namespaces via RBAC in Kubernetes or ArgoCD, 
+depending on which mode you've selected. 
+
 ## Metrics
 
 Starting with v0.8.0, Argo CD Image Updater exports Prometheus-compatible

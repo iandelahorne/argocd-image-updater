@@ -764,7 +764,7 @@ func TestKubernetesClient(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("List applications", func(t *testing.T) {
-		apps, err := client.ListApplications()
+		apps, err := client.ListApplications("")
 		require.NoError(t, err)
 		require.Len(t, apps, 1)
 
